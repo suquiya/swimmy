@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 //HTTPClient keep httpClient if user set custom Client
@@ -24,7 +25,7 @@ func Fetch(url string) (string, string, string, error) {
 	}
 	defer res.Body.Close()
 	contentType := res.Header.Get("Content-Type")
-	if contentType == "text/html" || contentType == "text/plain" {
+	if strings.HasPrefix(contentType, "text/html") || strings.HasPrefix(contentType, "text/plain") {
 		cbyte, err := ioutil.ReadAll(res.Body)
 		return url, contentType, string(cbyte), err
 	}

@@ -1,8 +1,15 @@
 package swimmy
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
+	"io/ioutil"
+	"strconv"
 	"strings"
+	"unicode/utf8"
+
+	"golang.org/x/net/html/charset"
 
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
@@ -38,72 +45,114 @@ Before parsing, Parse sanitize html content with its SanitizePolicy.
 func (p *PageDataBuilder) BuildPageData(pd *PageData, htmlContent string) *PageData {
 
 	sanitizedContent := Sanitize(htmlContent, p.SanitizePolicy)
+	canTokenize := true
+	WhyCannotTokenize := ""
+	if !utf8.ValidString(sanitizedContent) {
+		sr := strings.NewReader(sanitizedContent)
+		scByte, err := bufio.NewReader(sr).Peek(1024)
+		if err != nil {
+			panic(err)
+		}
+		e, name, _ := charset.DetermineEncoding(scByte, pd.ContentType)
+		sr = strings.NewReader(sanitizedContent)
+		if e != nil {
+			r := e.NewDecoder().Reader(sr)
+			scb, err := ioutil.ReadAll(r)
+			if err != nil {
+				panic(err)
+			}
+			sanitizedContent = string(scb)
+			sanitizedContent = Sanitize(htmlContent, p.SanitizePolicy)
+		} else {
+			fmt.Printf("bad encode: %s", name)
+			canTokenize = false
+			WhyCannotTokenize = "cannot htmlContents tokenize because of content's charset encoding"
+		}
+	}
 
-	ContentReader := strings.NewReader(sanitizedContent)
+	if strings.HasPrefix(pd.ContentType, "text/plain") {
+		if canTokenize {
+			canTokenize = false
+			WhyCannotTokenize = "cannot tokenize because of contentType is text"
+		} else {
+			WhyCannotTokenize = WhyCannotTokenize + "\r\ncannot tokenize because of contentType is text"
+		}
+	}
 
-	cTokenizer := html.NewTokenizer(ContentReader)
+	if canTokenize {
+		ContentReader := strings.NewReader(sanitizedContent)
 
-	parse := true
+		cTokenizer := html.NewTokenizer(ContentReader)
 
-	for parse {
-		tt := cTokenizer.Next()
+		parse := true
 
-		parse = tt != html.ErrorToken
+		for parse {
+			tt := cTokenizer.Next()
 
-		if parse && tt != html.EndTagToken {
-			tnByte, hasAttr := cTokenizer.TagName()
-			tn := string(tnByte)
-			switch tn {
-			case "meta":
-				if hasAttr {
+			parse = tt != html.ErrorToken
 
+			if parse && tt != html.EndTagToken {
+				tnByte, hasAttr := cTokenizer.TagName()
+				tn := string(tnByte)
+				switch tn {
+				case "meta":
+					if hasAttr {
+
+					}
+				case "title":
+					pd.Title = TakeMarkedUpText(cTokenizer, tnByte)
 				}
-			case "title":
 			}
 		}
+	} else {
+		fmt.Println(WhyCannotTokenize)
 	}
 
 	return pd
 
 }
 
-func takeMarkedUpText(ct *html.Tokenizer, tagName string) {
+//TakeMarkedUpText is take marked-up text between begin tag and end tag
+func TakeMarkedUpText(ct *html.Tokenizer, tagName []byte) string {
 	depth := 0
 	taking := true
 	var sb *strings.Builder
-	tagNameByte := []byte(tagName)
 
 	for taking {
 		tt := ct.Next()
 		switch tt {
 		case html.StartTagToken:
 			tName, _ := ct.TagName()
-			if bytes.Equal(tName, tagNameByte) {
+			if bytes.Equal(tName, tagName) {
 				depth++
 			}
+			WriteCurrentString(ct, tt, sb)
 
 		case html.EndTagToken:
 			tName, _ := ct.TagName()
-			if bytes.Equal(tName, tagNameByte) {
+			if bytes.Equal(tName, tagName) {
 				depth--
 				if depth < 1 {
 					taking = false
 				} else {
-
+					WriteCurrentString(ct, tt, sb)
 				}
 			} else {
-
+				WriteCurrentString(ct, tt, sb)
 			}
-
+		case html.ErrorToken:
+			taking = false
+		default:
+			WriteCurrentString(ct, tt, sb)
 		}
 	}
+	return sb.String()
 }
 
 //WriteCurrentString write string of now tag or text to strings.Builder
 func WriteCurrentString(tokenizer *html.Tokenizer, tokenType html.TokenType, sb *strings.Builder) {
 	switch tokenType {
 	case html.ErrorToken:
-		return
 	case html.TextToken:
 		sb.WriteString(EscapeBytes(tokenizer.Text()))
 	case html.StartTagToken:
@@ -129,7 +178,7 @@ func WriteCurrentString(tokenizer *html.Tokenizer, tokenType html.TokenType, sb 
 		sb.WriteString(">")
 	default:
 		sb.WriteString("Invalid token:< ")
-		sb.WriteString(strings.Itoa(tokenType))
+		sb.WriteString(strconv.Itoa(int(tokenType)))
 		sb.WriteString(">")
 	}
 }
