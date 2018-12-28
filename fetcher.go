@@ -6,23 +6,28 @@ import (
 	"net/http"
 )
 
-//SimpleFetch is download html object with Default Client
-func SimpleFetch(url string) (*PageData, string, error) {
-	return FetchWithGivenHTTPClient(url, http.DefaultClient)
-}
+//HTTPClient keep httpClient if user set custom Client
+var HTTPClient *http.Client
 
-//FetchWithGivenHTTPClient fetch url contents with custom http client. If you don't use your custom policy, use SimpleFetch(url string).
-func FetchWithGivenHTTPClient(url string, hc *http.Client) (*PageData, string, error) {
-	res, err := hc.Get(url)
+//Fetch fetch url contents with f's HTTPClient. If you don't set your custom http client, Fetch use DefaultClient of net/http package.
+func Fetch(url string) (string, string, string, error) {
+
+	var res *http.Response
+	var err error
+	if HTTPClient != nil {
+		res, err = HTTPClient.Get(url)
+	} else {
+		res, err = http.DefaultClient.Get(url)
+	}
 	if err != nil {
-		return nil, "", err
+		return "", "", "", err
 	}
 	defer res.Body.Close()
 	contentType := res.Header.Get("Content-Type")
 	if contentType == "text/html" || contentType == "text/plain" {
 		cbyte, err := ioutil.ReadAll(res.Body)
-		return NewPageData(url, contentType), string(cbyte), err
+		return url, contentType, string(cbyte), err
 	}
 
-	return nil, "", fmt.Errorf("Invalid Content-Type: %s", contentType)
+	return "", "", "", fmt.Errorf("Invalid Content-Type: %s", contentType)
 }
