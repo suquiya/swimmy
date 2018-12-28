@@ -86,6 +86,7 @@ func (p *PageDataBuilder) BuildPageData(pd *PageData, htmlContent string) *PageD
 
 		parse := true
 
+		metaNameEmptyCount := 0
 		for parse {
 			tt := cTokenizer.Next()
 
@@ -97,7 +98,30 @@ func (p *PageDataBuilder) BuildPageData(pd *PageData, htmlContent string) *PageD
 				switch tn {
 				case "meta":
 					if hasAttr {
+						moreAttr := true
+						var key, val []byte
+						nameAttr := ""
+						nstrb := []byte("name")
+						contentAttr := ""
+						cstrb := []byte("content")
+						for moreAttr {
+							key, val, moreAttr = cTokenizer.TagAttr()
+							switch {
+							case bytes.Equal(key, nstrb):
+								nameAttr = string(key)
+							case bytes.Equal(key, cstrb):
+								contentAttr = string(val)
+							}
+						}
 
+						switch nameAttr {
+						case "":
+							if contentAttr != "" {
+								metaNameEmptyCount++
+								pd.Ogp.OtherAttrs["empty"+strconv.Itoa(metaNameEmptyCount)] = contentAttr
+							}
+						case "description":
+						}
 					}
 				case "title":
 					pd.Title = TakeMarkedUpText(cTokenizer, tnByte)
