@@ -40,11 +40,11 @@ func DefaultClasses() map[string]string {
 
 	cns["CardDiv"] = "swimmy-card"
 	cns["SiteInfo"] = "sc-info"
-	cns["CardContents"] = "sc-contents"
+	cns["PageInfo"] = "sc-contents"
 	cns["PageImageWrapper"] = "sc-image-wrapper"
 	cns["PageImage"] = "sc-image"
-	cns["CardTitle"] = "sc-title"
-	cns["CardURL"] = "sc-url"
+	cns["PageTitle"] = "sc-title"
+	cns["PageURL"] = "sc-url"
 
 	return cns
 }
@@ -54,10 +54,10 @@ func DefaultTemplate() *template.Template {
 	str := `
 	<div class="{{.ClassNames.CardDiv}}" id="swimmy-{{.PageData.ID}}"><a href="{{.PageData.URL}}">
 	<div class="{{.ClassNames.SiteInfo}}">{{ .PageData.OGP.SiteName }}</div>
-	<div class="{{.ClassNames.CardContents}}">
+	<div class="{{.ClassNames.PageInfo}}">
 	<div class="{{.ClassNames.PageImageWrapper}}"><img class="{{.ClassNames.PageImage}}" /></div>
-	<a href="{{.PageData.URL}}" class="{{.CardBuilder.ClassNames.sc-title}}">{{.Title}}</a>
-	<a href="{{.URL}}" class="{{.CardBuilder.ClassNames.sc-url}}">{{.URL}}</a>
+	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.Title}}</a>
+	<a href="{{.URL}}" class="{{.ClassNames.PageURL}}">{{.URL}}</a>
 	</div>
 	</a></div>
 	`

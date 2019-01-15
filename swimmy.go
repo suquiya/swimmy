@@ -8,8 +8,11 @@ import "github.com/microcosm-cc/bluemonday"
 //DefaultContentFetcher is swimmy's defaultContentFetcher
 var DefaultContentFetcher *ContentFetcher
 
-//DefaultPageDataBuilder is swimmy's default pagedatabuilder
+//DefaultPageDataBuilder is swimmy's default PageDataBuilder
 var DefaultPageDataBuilder *PageDataBuilder
+
+//DefaultCardBuilder is swimmy's default CardDataBuilder
+var DefaultCardBuilder *CardBuilder
 
 //IDCount count of PageData's ID
 var IDCount int
@@ -17,6 +20,7 @@ var IDCount int
 func init() {
 	DefaultContentFetcher = NewContentFetcher(nil)
 	DefaultPageDataBuilder = NewPageDataBuilder(CPolicy(), TPolicy())
+	DefaultCardBuilder = DefSetCardBuilder()
 	IDCount = 0
 }
 
