@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -141,4 +142,46 @@ func writeCurrentTagString(tokenizer *html.Tokenizer, sb *strings.Builder) {
 //EscapeBytes html escape byte array
 func EscapeBytes(str []byte) string {
 	return html.EscapeString(string(str))
+}
+
+//CommentifyString commentify string inspired by cobra's commentifyString
+func CommentifyString(input string) string {
+	nlcode := "\n"
+	replacer := strings.NewReplacer("\r\n", nlcode, "\r", nlcode, "\n", nlcode)
+	inputNLd := replacer.Replace(input)
+
+	lines := strings.Split(inputNLd, "\n")
+	var sb strings.Builder
+	sb.Grow(len(input) + len(lines)*len("\n"))
+	c := "//"
+	for _, l := range lines {
+		if strings.HasPrefix(l, c) {
+			sb.WriteString(l)
+			sb.WriteString(nlcode)
+		} else {
+			sb.WriteString(c)
+			if l != "" {
+				sb.WriteString(l)
+			}
+			sb.WriteString(nlcode)
+		}
+	}
+
+	return strings.TrimSuffix(sb.String(), nlcode)
+}
+
+//ExecLicenseTextTemp exec template using templateStr and data
+func ExecLicenseTextTemp(templateStr string, data interface{}) (string, error) {
+	fm := template.FuncMap{"comment": CommentifyString}
+	t, err := template.New("").Funcs(fm).Parse(templateStr)
+
+	if err != nil {
+		return "", err
+	}
+
+	bb := bytes.NewBuffer(make([]byte, 0))
+
+	err = t.Execute(bb, data)
+
+	return bb.String(), err
 }

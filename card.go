@@ -45,6 +45,7 @@ func DefaultClasses() map[string]string {
 	cns["PageImage"] = "sc-image"
 	cns["PageTitle"] = "sc-title"
 	cns["PageURL"] = "sc-url"
+	cns["PageExcerpt"] = "sc-exc"
 
 	return cns
 }
@@ -57,7 +58,8 @@ func DefaultTemplate() *template.Template {
 	<div class="{{.ClassNames.PageInfo}}">
 	<div class="{{.ClassNames.PageImageWrapper}}"><img class="{{.ClassNames.PageImage}}" /></div>
 	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.Title}}</a>
-	<a href="{{.URL}}" class="{{.ClassNames.PageURL}}">{{.URL}}</a>
+	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageURL}}">{{.PageData}}</a>
+	<p
 	</div>
 	</a></div>
 	`
