@@ -46,7 +46,7 @@ type OpenGraphProtocol struct {
 	OtherInfo    map[string]string `json:"OtherInfo"`
 }
 
-//Set set meta values to ogp fields
+//Set set meta values to ogp fields. contentAttr is assumed after sanitizing.
 func (ogp *OpenGraphProtocol) Set(nameAttr, contentAttr string) {
 	if strings.HasPrefix(nameAttr, "og:") {
 		val := strings.TrimLeft(nameAttr, "og:")
@@ -160,6 +160,7 @@ func NewImageData() *ImageData {
 //NewPageData return new instance of PageData
 func NewPageData(url string, ctype string) *PageData {
 	npd := &PageData{url, IDCount, ctype, "", "", "", make([]string, 0, 1), NewOGP()}
+	IDCount++
 	return npd
 }
 
@@ -331,7 +332,7 @@ func (p *PageDataBuilder) BuildPageData(url string, ctype string, htmlContent st
 					}
 				case "body":
 					if pd.Description == "" {
-						pd.Description = TakeMarkedUpText(cTokenizer, tnByte)
+						pd.Description = html.EscapeString(TakeMarkedUpText(cTokenizer, tnByte))
 					}
 					parse = false
 				}

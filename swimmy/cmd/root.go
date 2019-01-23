@@ -68,6 +68,17 @@ More details, Please type "swimmy --help" and enter.
 				return err
 			}
 
+			tojson, err := cmd.Flags().GetBool("json")
+
+			if err != nil {
+				return err
+			}
+
+			tohtml, err := cmd.Flags().GetBool("html")
+
+			if err != nil {
+				return err
+			}
 			i = strings.ToLower(i)
 
 			argNum := len(cmd.Flags().Args())
@@ -136,7 +147,10 @@ More details, Please type "swimmy --help" and enter.
 				if err != nil {
 					return err
 				}
-				ow.WriteString("[")
+
+				if tojson {
+					ow.WriteString("[")
+				}
 
 				scanner := bufio.NewScanner(f)
 
@@ -148,11 +162,27 @@ More details, Please type "swimmy --help" and enter.
 						/*if count > 1 {
 							ow.WriteString(",")
 						}*/
-						err := swimmy.CreateJSON(line, ow, cmd.OutOrStdout(), count > 1)
-						if err != nil {
-							cmd.Println(err)
-						} else {
-							count++
+						var pd *swimmy.PageData
+						pd = nil
+						if tojson {
+							pd, err = swimmy.CreateJSON(line, ow, cmd.OutOrStdout(), count > 1, tohtml)
+							if err != nil {
+								cmd.Println(err)
+							} else {
+								count++
+							}
+						}
+						if tohtml {
+							if pd == nil {
+								_, err = swimmy.CreateHTML(line, ow, cmd.OutOrStdout(), count > 1, false)
+							} else {
+								err = swimmy.DefaultCardBuilder.Execute(pd, ow)
+								if err != nil {
+									cmd.Println(err)
+								} else {
+									count++
+								}
+							}
 						}
 
 					} else {
@@ -160,14 +190,33 @@ More details, Please type "swimmy --help" and enter.
 					}
 				}
 
-				ow.WriteString("]")
+				if tojson {
+					ow.WriteString("]")
+				}
 
 				if err := scanner.Err(); err != nil {
 					panic(err)
 				}
 			} else {
 				if govalidator.IsRequestURL(input) {
-					swimmy.CreateJSON(input, ow, cmd.OutOrStdout(), false)
+					var pd *swimmy.PageData
+					pd = nil
+					if tojson {
+						pd, err = swimmy.CreateJSON(input, ow, cmd.OutOrStdout(), false, tohtml)
+
+						if err != nil {
+							cmd.Println(err)
+						}
+					}
+					if tohtml {
+						if pd == nil {
+							_, err = swimmy.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
+							return err
+						}
+
+						return swimmy.DefaultCardBuilder.Execute(pd, ow)
+
+					}
 				} else {
 					cmd.Println("inputted url is not url: ", input)
 				}
@@ -183,8 +232,9 @@ More details, Please type "swimmy --help" and enter.
 
 	rootCmd.Flags().StringP("IfOutputExist", "i", "S", "this flag define behavior in case that specified output file is already exist: [A]ppend,[O]verwritte or [S]tdout, default is S.")
 
-	rootCmd.Flags().BoolP("tojson", "j", true, "this flag decide url information to json")
+	rootCmd.Flags().BoolP("json", "j", true, "this flag decide url information to json")
 
+	rootCmd.Flags().BoolP("html", "h", false, "this flag decide output format is html tags")
 	return rootCmd
 }
 
