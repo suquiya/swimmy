@@ -1,13 +1,16 @@
 package swimmy
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 )
@@ -184,4 +187,30 @@ func ExecLicenseTextTemp(templateStr string, data interface{}) (string, error) {
 	err = t.Execute(bb, data)
 
 	return bb.String(), err
+}
+
+//ReadList read list with newline-delimited.
+func ReadList(listPath string) ([]string, error) {
+	f, err := os.Open(listPath)
+	defer f.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	scanner := bufio.NewScanner(f)
+
+	list := make([]string, 0)
+	for scanner.Scan() {
+		list = append(list, scanner.Text())
+	}
+	return list, scanner.Err()
+}
+
+//IsFilePath validate whether val is filepath or not and confirm that it exist and it is not directory.
+func IsFilePath(val string) (bool, error) {
+	i, _ := govalidator.IsFilePath(val)
+	if i {
+
+	}
+
 }
