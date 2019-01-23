@@ -148,7 +148,7 @@ More details, Please type "swimmy --help" and enter.
 						/*if count > 1 {
 							ow.WriteString(",")
 						}*/
-						err := swimmy.Process(line, ow, cmd.OutOrStdout(), true, count > 1)
+						err := swimmy.CreateJSON(line, ow, cmd.OutOrStdout(), count > 1)
 						if err != nil {
 							cmd.Println(err)
 						} else {
@@ -167,7 +167,7 @@ More details, Please type "swimmy --help" and enter.
 				}
 			} else {
 				if govalidator.IsRequestURL(input) {
-					swimmy.Process(input, ow, cmd.OutOrStdout(), true, false)
+					swimmy.CreateJSON(input, ow, cmd.OutOrStdout(), false)
 				} else {
 					cmd.Println("inputted url is not url: ", input)
 				}
