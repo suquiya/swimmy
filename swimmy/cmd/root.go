@@ -30,14 +30,17 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/asaskevich/govalidator"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/suquiya/swimmy"
 )
 
 var cfgFile string
@@ -59,22 +62,115 @@ More details, Please type "swimmy --help" and enter.
 				return err
 			}
 
+			i, err := cmd.Flags().GetString("IfOutputExist")
+
+			if err != nil {
+				return err
+			}
+
+			i = strings.ToLower(i)
+
 			argNum := len(cmd.Flags().Args())
 			if argNum < 1 {
 				return fmt.Errorf("swimmy requires at least two arguments: ex. swimmy url output")
 			}
 
 			input := cmd.Flags().Arg(0)
-			isfp, _ := govalidator.IsFilePath(input)
+			isfp, err := swimmy.IsExistFilePath(input)
+			if !isfp {
+				return err
+			}
 
 			output := ""
 
+			var ow *bufio.Writer
+			var owf *os.File
+			owf = nil
+
+			/*
+				if output == "" {
+					ow = cmd.OutOrStdout()
+				} else {
+					is, err := swimmy.IsFilePath(output)
+					if is {
+
+					} else {
+						fmt.Println("Not filepath: %s, %s", output, err)
+					}
+				}
+			*/
+
 			if argNum > 1 {
 				output = cmd.Flags().Arg(1)
+				isfp, err := swimmy.IsFilePath(output)
+				if !isfp {
+					return err
+				}
+				if err == nil {
+
+					if i == "i" || i == "overwrite" {
+						owf, err = os.Create(output)
+						defer owf.Close()
+						if err != nil {
+							return err
+						}
+
+					} else if i == "a" || i == "append" {
+						owf, err = os.OpenFile(output, os.O_WRONLY|os.O_APPEND, 0666)
+						defer owf.Close()
+
+						if err != nil {
+							return err
+						}
+					} else {
+						ow = bufio.NewWriter(cmd.OutOrStdout())
+					}
+				}
+			} else {
+				ow = bufio.NewWriter(cmd.OutOrStdout())
 			}
 
 			if l {
+				f, err := os.Open(input)
+				defer f.Close()
+				if err != nil {
+					return err
+				}
+				ow.WriteString("[")
 
+				scanner := bufio.NewScanner(f)
+
+				swimmy.Init()
+				count := 0
+				for scanner.Scan() {
+					line := scanner.Text()
+					if govalidator.IsRequestURL(line) {
+						/*if count > 1 {
+							ow.WriteString(",")
+						}*/
+						err := swimmy.Process(line, ow, cmd.OutOrStdout(), true, count > 1)
+						if err != nil {
+							cmd.Println(err)
+						} else {
+							count++
+						}
+
+					} else {
+						cmd.Println("This line is not url: ", line)
+					}
+				}
+
+				ow.WriteString("]")
+
+				if err := scanner.Err(); err != nil {
+					panic(err)
+				}
+			} else {
+				if govalidator.IsRequestURL(input) {
+					swimmy.Process(input, ow, cmd.OutOrStdout(), true, false)
+				} else {
+					cmd.Println("inputted url is not url: ", input)
+				}
 			}
 
 			return nil
@@ -85,16 +181,11 @@ More details, Please type "swimmy --help" and enter.
 
 	rootCmd.Flags().BoolP("list", "l", false, "use list, you can specify urls list in txt format (separated by newline)")
 
+	rootCmd.Flags().StringP("IfOutputExist", "i", "S", "this flag define behavior in case that specified output file is already exist: [A]ppend,[O]verwritte or [S]tdout, default is S.")
+
+	rootCmd.Flags().BoolP("tojson", "j", true, "this flag decide url information to json")
+
 	return rootCmd
-}
-
-//IsFilePath validate whether val is filepath or not and confirm that it exist and it is not directory.
-func IsFilePath(val string) error {
-	i, _ := govalidator.IsFilePath(val)
-	if i {
-		return nil
-	}
-
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

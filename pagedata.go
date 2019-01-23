@@ -3,8 +3,10 @@ package swimmy
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -18,30 +20,30 @@ import (
 
 //PageData is a struct for storage data(information) of web page specified with url in order to create embed card or json data
 type PageData struct {
-	URL           string
-	ID            int
-	CannonicalURL string
-	ContentType   string
-	Title         string
-	Description   string
-	FaviconURL    []string
-	OGP           *OpenGraphProtocol
+	URL           string             `json:"URL"`
+	ID            int                `json:"ID"`
+	CannonicalURL string             `json:"CannonicalURL"`
+	ContentType   string             `json:"ContentType"`
+	Title         string             `json:"Title"`
+	Description   string             `json:"Description"`
+	FaviconURL    []string           `json:"FaviconURL"`
+	OGP           *OpenGraphProtocol `json:"OGP"`
 }
 
 //OpenGraphProtocol is strage for open graph protocol. OpenGraphProtocol in swimmy is only for creating data for embedding in website, so it does not storage video and music.
 type OpenGraphProtocol struct {
-	URL          string
-	SiteName     string
-	Title        string
-	Description  string
-	Locale       string
-	Type         string
-	OgImage      *ImageData
-	TwitterImage *ImageData
-	TwitterID    string
-	UpdatedTime  *time.Time
-	OtherAttrs   map[string]string
-	OtherInfo    map[string]string
+	URL          string            `json:"URL"`
+	SiteName     string            `json:"SiteName"`
+	Title        string            `json:"Title"`
+	Description  string            `json:"Description"`
+	Locale       string            `json:"Locale"`
+	Type         string            `json:"Type"`
+	OgImage      *ImageData        `json:"OgImage"`
+	TwitterImage *ImageData        `json:"TwitterImage"`
+	TwitterID    string            `json:"TwitterID"`
+	UpdatedTime  *time.Time        `json:"UpdatedTime"`
+	OtherAttrs   map[string]string `json:"OtherAttrs"`
+	OtherInfo    map[string]string `json:"OtherInfo"`
 }
 
 //Set set meta values to ogp fields
@@ -137,12 +139,12 @@ func (ogp *OpenGraphProtocol) Set(nameAttr, contentAttr string) {
 
 //ImageData storage properties of image
 type ImageData struct {
-	URL        string
-	SecureURL  string
-	FormatType string
-	AltText    string
-	Width      int
-	Height     int
+	URL        string `json:"URL"`
+	SecureURL  string `json:"SecureURL"`
+	FormatType string `json:"FormatType"`
+	AltText    string `json:"AltText"`
+	Width      int    `json:"Width"`
+	Height     int    `json:"Height"`
 }
 
 //CreateImageData return new instance of ImageData
@@ -187,12 +189,18 @@ func (p *PageDataBuilder) Sanitize(htmlContent string) string {
 	return Sanitize(htmlContent, p.PreSanitizePolicy)
 }
 
+//BuildPageData build pagedata on base pagedata
+func BuildPageData(url string, ctype string, htmlContent string) *PageData {
+	return DefaultPageDataBuilder.BuildPageData(url, ctype, htmlContent)
+}
+
 /*
 BuildPageData parse html content, retrieve tag info and fill PageData.
 Before parsing, Parse sanitize html content with its SanitizePolicy.
 */
-func (p *PageDataBuilder) BuildPageData(pd *PageData, htmlContent string) *PageData {
+func (p *PageDataBuilder) BuildPageData(url string, ctype string, htmlContent string) *PageData {
 
+	pd := NewPageData(url, ctype)
 	sanitizedContent := Sanitize(htmlContent, p.PreSanitizePolicy)
 	canTokenize := true
 	WhyCannotTokenize := ""
@@ -337,7 +345,41 @@ func (p *PageDataBuilder) BuildPageData(pd *PageData, htmlContent string) *PageD
 
 }
 
+//ComplementBasicFields complement pagedata basic fields if some basic field is empty.
+func (pd *PageData) ComplementBasicFields() {
+	if pd.IsPlainText() {
+		pd.Title = url.PathEscape(pd.URL)
+	} else {
+		if pd.CannonicalURL == "" {
+			pd.CannonicalURL = pd.URL
+		}
+		if pd.Title == "" {
+			pd.Title = pd.OGP.Title
+		}
+		if pd.Description == "" {
+			pd.Description = pd.OGP.Description
+		}
+		if pd.OGP.OgImage.URL == "" {
+			pd.OGP.OgImage = pd.OGP.TwitterImage
+		}
+	}
+}
+
+//ToJSON convert PageData to json.
+func (pd *PageData) ToJSON() ([]byte, error) {
+	j, err := json.Marshal(pd)
+	if err != nil {
+		return nil, err
+	}
+	return j, err
+}
+
 //IsPlainText return whether pagedata is text/plain or not.
 func (pd *PageData) IsPlainText() bool {
 	return strings.HasPrefix(pd.ContentType, "text/plain")
+}
+
+//IsPlainTextContentType return whether given contentType represents text/plain or not
+func IsPlainTextContentType(ctype string) bool {
+	return strings.HasPrefix(ctype, "text/plain")
 }
