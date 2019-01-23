@@ -66,8 +66,8 @@ func TPolicy() *bluemonday.Policy {
 	return tp
 }
 
-//Process process URL in default settings. This is used in cli tool. This write data to bw and return error if error occur.
-func Process(URL string, w io.Writer, messageWriter io.Writer, tojson, hasPrev bool) error {
+//CreateJSON process URL in default settings to generate json. This is used in cli tool. This write data to bw and return error if error occur.
+func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool) error {
 	url, ctype, content, err := Fetch(URL)
 	if err != nil {
 		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
