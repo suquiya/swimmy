@@ -67,21 +67,47 @@ func TPolicy() *bluemonday.Policy {
 }
 
 //CreateJSON process URL in default settings to generate json. This is used in cli tool. This write data to bw and return error if error occur.
-func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool) error {
+func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
 	url, ctype, content, err := Fetch(URL)
 	if err != nil {
 		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
-		return err
+		return nil, err
 	}
 	pd := BuildPageData(url, ctype, string(content))
 	pd.ComplementBasicFields()
 	jsonByte, err := pd.ToJSON()
 	if err != nil {
-		return err
+		if returnPageData {
+			return pd, err
+		}
+		return nil, err
 	}
 	if hasPrev {
 		w.Write([]byte(","))
 	}
 	w.Write(jsonByte)
-	return nil
+	if returnPageData {
+		return pd, err
+	}
+	return nil, err
+}
+
+//CreateHTML create html string.
+func CreateHTML(URL string, w, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
+	url, ctype, content, err := Fetch(URL)
+	if err != nil {
+		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
+		return nil, err
+	}
+	pd := BuildPageData(url, ctype, string(content))
+	pd.ComplementBasicFields()
+
+	if hasPrev {
+		w.Write([]byte("\r\n"))
+	}
+	err = DefaultCardBuilder.Execute(pd, w)
+	if returnPageData {
+		return pd, err
+	}
+	return nil, err
 }

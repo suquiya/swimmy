@@ -2,7 +2,7 @@ package swimmy
 
 import (
 	"html/template"
-	"strings"
+	"io"
 )
 
 //CardBuilder build card string from pagedata
@@ -21,17 +21,15 @@ func DefSetCardBuilder() *CardBuilder {
 	return &CardBuilder{DefaultTemplate(), DefaultClasses()}
 }
 
-//BuildCard build card as string
-func (cb *CardBuilder) BuildCard(pd *PageData) string {
+//Execute build card by execute html template.
+func (cb *CardBuilder) Execute(pd *PageData, w io.Writer) error {
 	m := make(map[string]interface{})
 
 	m["ClassNames"] = cb.ClassNames
 	m["PageData"] = pd
 
-	var sb strings.Builder
-	cb.Template.Execute(&sb, m)
-
-	return sb.String()
+	err := cb.Template.Execute(w, m)
+	return err
 }
 
 //DefaultClasses return default classNames in card as map
@@ -45,7 +43,7 @@ func DefaultClasses() map[string]string {
 	cns["PageImage"] = "sc-image"
 	cns["PageTitle"] = "sc-title"
 	cns["PageURL"] = "sc-url"
-	cns["PageExcerpt"] = "sc-exc"
+	cns["PageDescription"] = "sc-description"
 
 	return cns
 }
@@ -56,10 +54,10 @@ func DefaultTemplate() *template.Template {
 	<div class="{{.ClassNames.CardDiv}}" id="swimmy-{{.PageData.ID}}"><a href="{{.PageData.URL}}">
 	<div class="{{.ClassNames.SiteInfo}}">{{ .PageData.OGP.SiteName }}</div>
 	<div class="{{.ClassNames.PageInfo}}">
-	<div class="{{.ClassNames.PageImageWrapper}}"><img class="{{.ClassNames.PageImage}}" /></div>
-	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.Title}}</a>
-	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageURL}}">{{.PageData}}</a>
-	<p
+	<div class="{{.ClassNames.PageImageWrapper}}"><img class="{{.ClassNames.PageImage}}" src="{{.PageData.OGP.OgImage.URL}}" /></div>
+	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.PageData.Title}}</a>
+	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageURL}}">{{.PageData.URL}}</a>
+	<p class="{{.ClassNames.PageDescription}}">{{.PageData.Description}}</p>
 	</div>
 	</a></div>
 	`
