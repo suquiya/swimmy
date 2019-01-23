@@ -10,7 +10,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
 )
@@ -206,11 +205,29 @@ func ReadList(listPath string) ([]string, error) {
 	return list, scanner.Err()
 }
 
-//IsFilePath validate whether val is filepath or not and confirm that it exist and it is not directory.
-func IsFilePath(val string) (bool, error) {
-	i, _ := govalidator.IsFilePath(val)
-	if i {
+//IsExistFilePath validate whether val is exist filepath or not and confirm that it exist and it is not directory.
+func IsExistFilePath(val string) (bool, error) {
 
+	fi, err := os.Stat(val)
+	if os.IsNotExist(err) {
+		return false, fmt.Errorf("Not Exist: filepath %s", val)
+	} else if err != nil {
+		return false, err
 	}
+	if fi.IsDir() {
+		return false, fmt.Errorf("%s is not file", val)
+	}
+	return true, err
 
+}
+
+//IsFilePath is validate filepath
+func IsFilePath(val string) (bool, error) {
+	_, err := os.Stat(val)
+	if os.IsNotExist(err) {
+		return true, err
+	} else if err != nil {
+		return false, err
+	}
+	return true, err
 }

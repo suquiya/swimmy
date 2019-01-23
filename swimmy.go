@@ -5,6 +5,7 @@ package swimmy
 
 import (
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -63,4 +64,24 @@ func TPolicy() *bluemonday.Policy {
 	tp := bluemonday.NewPolicy()
 
 	return tp
+}
+
+//Process process URL in default settings. This is used in cli tool. This write data to bw and return error if error occur.
+func Process(URL string, w io.Writer, messageWriter io.Writer, tojson, hasPrev bool) error {
+	url, ctype, content, err := Fetch(URL)
+	if err != nil {
+		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
+		return err
+	}
+	pd := BuildPageData(url, ctype, string(content))
+	pd.ComplementBasicFields()
+	jsonByte, err := pd.ToJSON()
+	if err != nil {
+		return err
+	}
+	if hasPrev {
+		w.Write([]byte(","))
+	}
+	w.Write(jsonByte)
+	return nil
 }

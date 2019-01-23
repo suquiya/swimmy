@@ -9,6 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/asaskevich/govalidator"
+
 	"golang.org/x/net/html/charset"
 )
 
@@ -23,12 +25,16 @@ func NewContentFetcher(HTTPClient *http.Client) *ContentFetcher {
 }
 
 //Fetch with DefaultContentFetcher
-func Fetch(url string) (string, string, string, error) {
+func Fetch(url string) (string, string, []byte, error) {
 	return DefaultContentFetcher.Fetch(url)
 }
 
 //Fetch fetch url contents with f's HTTPClient. If you don't set your custom http client, Fetch use DefaultClient of net/http package.
-func (cf *ContentFetcher) Fetch(url string) (string, string, string, error) {
+func (cf *ContentFetcher) Fetch(url string) (string, string, []byte, error) {
+
+	if govalidator.IsRequestURL(url) {
+		return "", "", nil, fmt.Errorf("input is not URL")
+	}
 
 	var res *http.Response
 	var err error
@@ -38,7 +44,7 @@ func (cf *ContentFetcher) Fetch(url string) (string, string, string, error) {
 		res, err = http.DefaultClient.Get(url)
 	}
 	if err != nil {
-		return "", "", "", err
+		return "", "", nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 400 {
@@ -46,7 +52,7 @@ func (cf *ContentFetcher) Fetch(url string) (string, string, string, error) {
 		if strings.HasPrefix(contentType, "text/html") || strings.HasPrefix(contentType, "text/plain") {
 			cbyte, err := ioutil.ReadAll(res.Body)
 			if utf8.Valid(cbyte) {
-				return url, contentType, string(cbyte), err
+				return url, contentType, cbyte, err
 			}
 			byter := bytes.NewReader(cbyte)
 			dbyte, err := bufio.NewReader(byter).Peek(1024)
@@ -61,13 +67,13 @@ func (cf *ContentFetcher) Fetch(url string) (string, string, string, error) {
 				if err != nil {
 					panic(err)
 				}
-				return url, contentType, string(scb), err
+				return url, contentType, scb, err
 			}
 			fmt.Printf("Bad Encode: %s", name)
-			return url, "bad Encode", string(cbyte), fmt.Errorf("Bad Encode: %s", name)
+			return url, "bad Encode", cbyte, fmt.Errorf("Bad Encode: %s", name)
 		}
 
-		return "", "", "", fmt.Errorf("Invalid Content-Type: %s", contentType)
+		return "", "", nil, fmt.Errorf("Invalid Content-Type: %s", contentType)
 	}
-	return "", "StatusError", res.Status, fmt.Errorf("statusError")
+	return "", "StatusError", []byte(res.Status), fmt.Errorf("statusError")
 }
