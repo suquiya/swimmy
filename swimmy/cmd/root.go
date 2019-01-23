@@ -197,30 +197,32 @@ More details, Please type "swimmy --help" and enter.
 				if err := scanner.Err(); err != nil {
 					panic(err)
 				}
-			} else {
-				if govalidator.IsRequestURL(input) {
-					var pd *swimmy.PageData
-					pd = nil
-					if tojson {
-						pd, err = swimmy.CreateJSON(input, ow, cmd.OutOrStdout(), false, tohtml)
 
-						if err != nil {
-							cmd.Println(err)
-						}
-					}
-					if tohtml {
-						if pd == nil {
-							_, err = swimmy.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
-							return err
-						}
-
-						return swimmy.DefaultCardBuilder.Execute(pd, ow)
-
-					}
-				} else {
-					cmd.Println("inputted url is not url: ", input)
-				}
+				return ow.Flush()
 			}
+			if govalidator.IsRequestURL(input) {
+				var pd *swimmy.PageData
+				pd = nil
+				if tojson {
+					pd, err = swimmy.CreateJSON(input, ow, cmd.OutOrStdout(), false, tohtml)
+
+					if err != nil {
+						cmd.Println(err)
+					}
+				}
+				if tohtml {
+					if pd == nil {
+						_, err = swimmy.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
+						return err
+					}
+
+					swimmy.DefaultCardBuilder.Execute(pd, ow)
+
+				}
+
+				return ow.Flush()
+			}
+			cmd.Println("inputted url is not url: ", input)
 
 			return nil
 		},
