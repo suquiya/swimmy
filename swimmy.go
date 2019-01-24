@@ -70,7 +70,7 @@ func TPolicy() *bluemonday.Policy {
 func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
 	url, ctype, content, err := Fetch(URL)
 	if err != nil {
-		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
+		fmt.Fprintf(messageWriter, "In Fetch Process, error occur\r\n")
 		return nil, err
 	}
 	pd := BuildPageData(url, ctype, string(content))
@@ -86,6 +86,9 @@ func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, 
 		w.Write([]byte(","))
 	}
 	w.Write(jsonByte)
+	/*if bw, ok := w.(*bufio.Writer); ok {
+		bw.Flush()
+	}*/
 	if returnPageData {
 		return pd, err
 	}
@@ -93,7 +96,7 @@ func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, 
 }
 
 //CreateHTML create html string.
-func CreateHTML(URL string, w, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
+func CreateHTML(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
 	url, ctype, content, err := Fetch(URL)
 	if err != nil {
 		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
@@ -105,7 +108,12 @@ func CreateHTML(URL string, w, messageWriter io.Writer, hasPrev bool, returnPage
 	if hasPrev {
 		w.Write([]byte("\r\n"))
 	}
+
+	fmt.Printf("pagedata: %#v\r\n", pd)
 	err = DefaultCardBuilder.Execute(pd, w)
+	/*if bw, ok := w.(*bufio.Writer); ok {
+		bw.Flush()
+	}*/
 	if returnPageData {
 		return pd, err
 	}

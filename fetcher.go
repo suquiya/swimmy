@@ -32,7 +32,7 @@ func Fetch(url string) (string, string, []byte, error) {
 //Fetch fetch url contents with f's HTTPClient. If you don't set your custom http client, Fetch use DefaultClient of net/http package.
 func (cf *ContentFetcher) Fetch(url string) (string, string, []byte, error) {
 
-	if govalidator.IsRequestURL(url) {
+	if !govalidator.IsRequestURL(url) {
 		return "", "", nil, fmt.Errorf("input is not URL")
 	}
 

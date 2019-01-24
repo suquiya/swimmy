@@ -53,7 +53,7 @@ func ParseTime(timeStr string) (*time.Time, string, error) {
 func TakeMarkedUpText(ct *html.Tokenizer, tagName []byte) string {
 	depth := 0
 	taking := true
-	var sb *strings.Builder
+	var sb strings.Builder
 
 	for taking {
 		tt := ct.Next()
@@ -63,7 +63,7 @@ func TakeMarkedUpText(ct *html.Tokenizer, tagName []byte) string {
 			if bytes.Equal(tName, tagName) {
 				depth++
 			}
-			WriteCurrentString(ct, tt, sb)
+			WriteCurrentString(ct, tt, &sb)
 
 		case html.EndTagToken:
 			tName, _ := ct.TagName()
@@ -72,15 +72,15 @@ func TakeMarkedUpText(ct *html.Tokenizer, tagName []byte) string {
 				if depth < 1 {
 					taking = false
 				} else {
-					WriteCurrentString(ct, tt, sb)
+					WriteCurrentString(ct, tt, &sb)
 				}
 			} else {
-				WriteCurrentString(ct, tt, sb)
+				WriteCurrentString(ct, tt, &sb)
 			}
 		case html.ErrorToken:
 			taking = false
 		default:
-			WriteCurrentString(ct, tt, sb)
+			WriteCurrentString(ct, tt, &sb)
 		}
 	}
 	return sb.String()
@@ -229,5 +229,5 @@ func IsFilePath(val string) (bool, error) {
 	} else if err != nil {
 		return false, err
 	}
-	return true, err
+	return true, nil
 }
