@@ -27,7 +27,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-package cmd
+package main
 
 import (
 	"bufio"
@@ -35,12 +35,13 @@ import (
 	"os"
 	"strings"
 
+	swim "github.com/suquiya/swimmy"
+
 	"github.com/asaskevich/govalidator"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/suquiya/swimmy"
 )
 
 var cfgFile string
@@ -110,7 +111,7 @@ More details, Please type "swimmy --help" and enter.
 
 			if argNum > 1 {
 				output = cmd.Flags().Arg(1)
-				isfp, err := swimmy.IsFilePath(output)
+				isfp, err := swim.IsFilePath(output)
 				if !isfp {
 					return err
 				}
@@ -147,9 +148,9 @@ More details, Please type "swimmy --help" and enter.
 				ow = bufio.NewWriter(cmd.OutOrStdout())
 			}
 
-			swimmy.Init()
+			swim.Init()
 			if l {
-				isfp, err := swimmy.IsExistFilePath(input)
+				isfp, err := swim.IsExistFilePath(input)
 				if !isfp {
 					return err
 				}
@@ -172,10 +173,10 @@ More details, Please type "swimmy --help" and enter.
 						/*if count > 1 {
 							ow.WriteString(",")
 						}*/
-						var pd *swimmy.PageData
+						var pd *swim.PageData
 						pd = nil
 						if tojson {
-							pd, err = swimmy.CreateJSON(line, ow, cmd.OutOrStdout(), count > 1, tohtml)
+							pd, err = swim.CreateJSON(line, ow, cmd.OutOrStdout(), count > 1, tohtml)
 							if err != nil {
 								cmd.Println(err)
 							} else {
@@ -184,9 +185,9 @@ More details, Please type "swimmy --help" and enter.
 						}
 						if tohtml {
 							if pd == nil {
-								_, err = swimmy.CreateHTML(line, ow, cmd.OutOrStdout(), count > 1, false)
+								_, err = swim.CreateHTML(line, ow, cmd.OutOrStdout(), count > 1, false)
 							} else {
-								err = swimmy.DefaultCardBuilder.Execute(pd, ow)
+								err = swim.DefaultCardBuilder.Execute(pd, ow)
 								if err != nil {
 									cmd.Println(err)
 								} else {
@@ -211,10 +212,10 @@ More details, Please type "swimmy --help" and enter.
 				return ow.Flush()
 			}
 			if govalidator.IsRequestURL(input) {
-				var pd *swimmy.PageData
+				var pd *swim.PageData
 				pd = nil
 				if tojson {
-					pd, err = swimmy.CreateJSON(input, ow, cmd.OutOrStdout(), false, tohtml)
+					pd, err = swim.CreateJSON(input, ow, cmd.OutOrStdout(), false, tohtml)
 
 					if err != nil {
 						cmd.Println(err)
@@ -222,9 +223,9 @@ More details, Please type "swimmy --help" and enter.
 				}
 				if tohtml {
 					if pd == nil {
-						_, err = swimmy.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
+						_, err = swim.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
 					} else {
-						swimmy.DefaultCardBuilder.Execute(pd, ow)
+						swim.DefaultCardBuilder.Execute(pd, ow)
 					}
 				}
 
