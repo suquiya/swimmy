@@ -7,8 +7,8 @@ import (
 
 //CardBuilder build card string from pagedata
 type CardBuilder struct {
-	Template   *template.Template
-	ClassNames map[string]string
+	CardTemplate *template.Template
+	ClassNames   map[string]string
 }
 
 //NewCardBuilder create a empty instance of CardBuilder and return it
@@ -23,12 +23,13 @@ func DefSetCardBuilder() *CardBuilder {
 
 //Execute build card by execute html template.
 func (cb *CardBuilder) Execute(pd *PageData, w io.Writer) error {
-	m := make(map[string]interface{})
+	d := make(map[string]interface{})
 
-	m["ClassNames"] = cb.ClassNames
-	m["PageData"] = pd
+	d["ClassNames"] = cb.ClassNames
+	d["PageData"] = pd
 
-	err := cb.Template.Execute(w, m)
+	err := cb.CardTemplate.Execute(w, d)
+
 	return err
 }
 
@@ -50,19 +51,25 @@ func DefaultClasses() map[string]string {
 
 //DefaultTemplate return swimmy's default template
 func DefaultTemplate() *template.Template {
-	str := `
-	<div class="{{.ClassNames.CardDiv}}" id="swimmy-{{.PageData.ID}}"><a href="{{.PageData.URL}}">
+
+	str := `<div class="{{.ClassNames.CardDiv}}" id="swimmy-{{.PageData.ID}}">
+	<a href="{{.PageData.URL}}">
 	<div class="{{.ClassNames.SiteInfo}}">{{ .PageData.OGP.SiteName }}</div>
 	<div class="{{.ClassNames.PageInfo}}">
-	<div class="{{.ClassNames.PageImageWrapper}}"><img class="{{.ClassNames.PageImage}}" src="{{.PageData.OGP.OgImage.URL}}" /></div>
+	<div class="{{.ClassNames.PageImageWrapper}}">
+	<img class="{{.ClassNames.PageImage}}" src="{{.PageData.OGP.OgImage.URL}}" />
+	</div>
 	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.PageData.Title}}</a>
 	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageURL}}">{{.PageData.URL}}</a>
-	<p class="{{.ClassNames.PageDescription}}">{{.PageData.Description}}</p>
+	<div class="{{.ClassNames.PageDescription}}">
+	{{.PageData.Description}}
 	</div>
-	</a></div>
-	`
+	</div>
+	</a>
+	</div>`
 
-	tmpl, err := template.New("cardTemplate").Parse(str)
+	//str := "test\r\n"
+	tmpl, err := template.New("DefaultCard").Parse(str)
 	if err != nil {
 		panic(err)
 	}

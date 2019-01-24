@@ -48,7 +48,7 @@ var cfgFile string
 // NewSwimmyCmd return the base command when called without any subcommands
 func NewSwimmyCmd() *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use:   "swimmy",
+		Use:   "swimmy input <output>",
 		Short: "Swimmy is a tool that pull meta info from url and write info to html or json",
 		Long: `Swimmy is a tool that pull meta info from url and write info to html or json.
 It is a package that fetch URL info and process it. It is for embedding external site information as card or outputting json.
@@ -68,29 +68,26 @@ More details, Please type "swimmy --help" and enter.
 				return err
 			}
 
-			tojson, err := cmd.Flags().GetBool("json")
+			formatStr, err := cmd.Flags().GetString("format")
 
 			if err != nil {
 				return err
 			}
 
-			tohtml, err := cmd.Flags().GetBool("html")
+			tojson := formatStr == "json" || strings.HasPrefix(formatStr, "json,") || strings.HasSuffix(formatStr, ",json")
 
-			if err != nil {
-				return err
-			}
+			tohtml := formatStr == "html" || strings.HasPrefix(formatStr, "html,") || strings.HasSuffix(formatStr, ",html")
+
+			fmt.Println(tojson, tohtml)
+
 			i = strings.ToLower(i)
 
 			argNum := len(cmd.Flags().Args())
 			if argNum < 1 {
-				return fmt.Errorf("swimmy requires at least two arguments: ex. swimmy url output")
+				return fmt.Errorf("swimmy requires at least one arguments: ex. swimmy url <output>")
 			}
 
 			input := cmd.Flags().Arg(0)
-			isfp, err := swimmy.IsExistFilePath(input)
-			if !isfp {
-				return err
-			}
 
 			output := ""
 
@@ -117,14 +114,15 @@ More details, Please type "swimmy --help" and enter.
 				if !isfp {
 					return err
 				}
-				if err == nil {
+				if err == nil { //output file is already exist.
 
-					if i == "i" || i == "overwrite" {
+					if i == "o" || i == "overwrite" {
 						owf, err = os.Create(output)
 						defer owf.Close()
 						if err != nil {
 							return err
 						}
+						ow = bufio.NewWriter(owf)
 
 					} else if i == "a" || i == "append" {
 						owf, err = os.OpenFile(output, os.O_WRONLY|os.O_APPEND, 0666)
@@ -133,15 +131,28 @@ More details, Please type "swimmy --help" and enter.
 						if err != nil {
 							return err
 						}
+						ow = bufio.NewWriter(owf)
 					} else {
 						ow = bufio.NewWriter(cmd.OutOrStdout())
 					}
+				} else { //output file does not exist.
+					owf, err = os.Create(output)
+					defer owf.Close()
+					if err != nil {
+						return err
+					}
+					ow = bufio.NewWriter(owf)
 				}
 			} else {
 				ow = bufio.NewWriter(cmd.OutOrStdout())
 			}
 
+			swimmy.Init()
 			if l {
+				isfp, err := swimmy.IsExistFilePath(input)
+				if !isfp {
+					return err
+				}
 				f, err := os.Open(input)
 				defer f.Close()
 				if err != nil {
@@ -154,7 +165,6 @@ More details, Please type "swimmy --help" and enter.
 
 				scanner := bufio.NewScanner(f)
 
-				swimmy.Init()
 				count := 0
 				for scanner.Scan() {
 					line := scanner.Text()
@@ -213,11 +223,9 @@ More details, Please type "swimmy --help" and enter.
 				if tohtml {
 					if pd == nil {
 						_, err = swimmy.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
-						return err
+					} else {
+						swimmy.DefaultCardBuilder.Execute(pd, ow)
 					}
-
-					swimmy.DefaultCardBuilder.Execute(pd, ow)
-
 				}
 
 				return ow.Flush()
@@ -234,9 +242,8 @@ More details, Please type "swimmy --help" and enter.
 
 	rootCmd.Flags().StringP("IfOutputExist", "i", "S", "this flag define behavior in case that specified output file is already exist: [A]ppend,[O]verwritte or [S]tdout, default is S.")
 
-	rootCmd.Flags().BoolP("json", "j", true, "this flag decide url information to json")
+	rootCmd.Flags().StringP("format", "f", "json", "this flag decide format for outputting url information. You can specify \"json\" or \"html\". If you want to get two type formats, you should specify \"json,html\". Default is \"json\".")
 
-	rootCmd.Flags().BoolP("html", "h", false, "this flag decide output format is html tags")
 	return rootCmd
 }
 
@@ -283,7 +290,7 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".swimmy")
 
-		fmt.Println(home)
+		//fmt.Println(home)
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
