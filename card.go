@@ -1,8 +1,13 @@
 package swimmy
 
 import (
+	"bytes"
+	"fmt"
 	"html/template"
 	"io"
+
+	min "github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/html"
 )
 
 //CardBuilder build card string from pagedata
@@ -19,6 +24,26 @@ func NewCardBuilder() *CardBuilder {
 //DefSetCardBuilder return a CardBuilder which set swimmy's default template and Classes.
 func DefSetCardBuilder() *CardBuilder {
 	return &CardBuilder{DefaultTemplate(), DefaultClasses()}
+}
+
+//WriteCardHTML write card html tag.
+func (cb *CardBuilder) WriteCardHTML(pd *PageData, w io.Writer, minify bool) {
+	if minify {
+		var bb bytes.Buffer
+		cb.Execute(pd, &bb)
+		m := min.New()
+		m.AddFunc("text/html", html.Minify)
+		b, err := m.Bytes("text/html", bb.Bytes())
+		if err != nil {
+			panic(err)
+		}
+		w.Write(b)
+	} else {
+		err := cb.Execute(pd, w)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 //Execute build card by execute html template.
@@ -52,21 +77,7 @@ func DefaultClasses() map[string]string {
 //DefaultTemplate return swimmy's default template
 func DefaultTemplate() *template.Template {
 
-	str := `<div class="{{.ClassNames.CardDiv}}" id="swimmy-{{.PageData.ID}}">
-	<a href="{{.PageData.URL}}">
-	<div class="{{.ClassNames.SiteInfo}}">{{ .PageData.OGP.SiteName }}</div>
-	<div class="{{.ClassNames.PageInfo}}">
-	<div class="{{.ClassNames.PageImageWrapper}}">
-	<img class="{{.ClassNames.PageImage}}" src="{{.PageData.OGP.OgImage.URL}}" />
-	</div>
-	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.PageData.Title}}</a>
-	<a href="{{.PageData.URL}}" class="{{.ClassNames.PageURL}}">{{.PageData.URL}}</a>
-	<div class="{{.ClassNames.PageDescription}}">
-	{{.PageData.Description}}
-	</div>
-	</div>
-	</a>
-	</div>`
+	str := `<div class="{{.ClassNames.CardDiv}}" id="swimmy-{{.PageData.ID}}"><a href="{{.PageData.URL}}"><div class="{{.ClassNames.SiteInfo}}">{{ .PageData.OGP.SiteName }}</div><div class="{{.ClassNames.PageInfo}}"><div class="{{.ClassNames.PageImageWrapper}}"><img class="{{.ClassNames.PageImage}}" src="{{.PageData.OGP.OgImage.URL}}" /></div><a href="{{.PageData.URL}}" class="{{.ClassNames.PageTitle}}">{{.PageData.Title}}</a><a href="{{.PageData.URL}}" class="{{.ClassNames.PageURL}}">{{.PageData.URL}}</a><div class="{{.ClassNames.PageDescription}}">{{.PageData.Description}}</div></div></a></div>`
 
 	//str := "test\r\n"
 	tmpl, err := template.New("DefaultCard").Parse(str)

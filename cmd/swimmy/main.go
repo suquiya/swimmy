@@ -29,8 +29,6 @@
 
 package main
 
-import "github.com/suquiya/swimmy/swimmy/cmd"
-
 func main() {
-	cmd.Execute()
+	Execute()
 }
