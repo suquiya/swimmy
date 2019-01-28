@@ -35,9 +35,8 @@ import (
 	"os"
 	"strings"
 
-	swim "github.com/suquiya/swimmy"
-
 	"github.com/asaskevich/govalidator"
+	"github.com/suquiya/swimmy"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -111,7 +110,7 @@ More details, Please type "swimmy --help" and enter.
 
 			if argNum > 1 {
 				output = cmd.Flags().Arg(1)
-				isfp, err := swim.IsFilePath(output)
+				isfp, err := swimmy.IsFilePath(output)
 				if !isfp {
 					return err
 				}
@@ -148,9 +147,9 @@ More details, Please type "swimmy --help" and enter.
 				ow = bufio.NewWriter(cmd.OutOrStdout())
 			}
 
-			swim.Init()
+			swimmy.Init()
 			if l {
-				isfp, err := swim.IsExistFilePath(input)
+				isfp, err := swimmy.IsExistFilePath(input)
 				if !isfp {
 					return err
 				}
@@ -173,27 +172,26 @@ More details, Please type "swimmy --help" and enter.
 						/*if count > 1 {
 							ow.WriteString(",")
 						}*/
-						var pd *swim.PageData
-						pd = nil
-						if tojson {
-							pd, err = swim.CreateJSON(line, ow, cmd.OutOrStdout(), count > 1, tohtml)
-							if err != nil {
-								cmd.Println(err)
-							} else {
-								count++
-							}
-						}
-						if tohtml {
-							if pd == nil {
-								_, err = swim.CreateHTML(line, ow, cmd.OutOrStdout(), count > 1, false)
-							} else {
-								err = swim.DefaultCardBuilder.Execute(pd, ow)
+						pd, err := swimmy.FetchAndBuildPageData(line, cmd.OutOrStdout())
+						if err == nil {
+							if tojson {
+								err = swimmy.WriteJSON(pd, ow, cmd.OutOrStdout(), count > 1)
 								if err != nil {
 									cmd.Println(err)
 								} else {
 									count++
 								}
 							}
+							if tohtml {
+								err = swimmy.WriteHTML(pd, swimmy.DefaultCardBuilder, ow, cmd.OutOrStdout(), count > 1)
+								if err != nil {
+									cmd.Println(err)
+								} else {
+									count++
+								}
+							}
+						} else {
+							cmd.Println(err)
 						}
 
 					} else {
@@ -212,21 +210,27 @@ More details, Please type "swimmy --help" and enter.
 				return ow.Flush()
 			}
 			if govalidator.IsRequestURL(input) {
-				var pd *swim.PageData
-				pd = nil
-				if tojson {
-					pd, err = swim.CreateJSON(input, ow, cmd.OutOrStdout(), false, tohtml)
 
-					if err != nil {
-						cmd.Println(err)
+				pd, err := swimmy.FetchAndBuildPageData(input, cmd.OutOrStdout())
+				if err == nil {
+					if tojson {
+						err = swimmy.WriteJSON(pd, ow, cmd.OutOrStdout(), false)
+
+						if err != nil {
+							cmd.Println(err)
+						}
 					}
-				}
-				if tohtml {
-					if pd == nil {
-						_, err = swim.CreateHTML(input, ow, cmd.OutOrStdout(), false, false)
-					} else {
-						swim.DefaultCardBuilder.Execute(pd, ow)
+					if tohtml {
+
+						err = swimmy.WriteHTML(pd, swimmy.DefaultCardBuilder, ow, cmd.OutOrStdout(), false)
+
+						if err != nil {
+							cmd.Println(err)
+						}
+
 					}
+				} else {
+					cmd.Println(err)
 				}
 
 				return ow.Flush()

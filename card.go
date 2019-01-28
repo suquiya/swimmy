@@ -17,13 +17,8 @@ type CardBuilder struct {
 }
 
 //NewCardBuilder create a empty instance of CardBuilder and return it
-func NewCardBuilder() *CardBuilder {
-	return &CardBuilder{nil, nil}
-}
-
-//DefSetCardBuilder return a CardBuilder which set swimmy's default template and Classes.
-func DefSetCardBuilder() *CardBuilder {
-	return &CardBuilder{DefaultTemplate(), DefaultClasses()}
+func NewCardBuilder(cardtemplate *template.Template, classnames map[string]string) *CardBuilder {
+	return &CardBuilder{cardtemplate, classnames}
 }
 
 //WriteCardHTML write card html tag.
