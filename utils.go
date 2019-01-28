@@ -22,7 +22,7 @@ func Sanitize(htmlContent string, policy ...*bluemonday.Policy) string {
 	return policy[0].Sanitize(htmlContent)
 }
 
-//ParseTime parse time string
+//ParseTime parse time string. This function test four formats following ISO8601.
 func ParseTime(timeStr string) (*time.Time, string, error) {
 	formatStrings := []string{
 		"2006-01-02T15:04:05-07:00",
