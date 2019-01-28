@@ -28,7 +28,7 @@ var IDCount int
 func Init() {
 	DefaultContentFetcher = NewContentFetcher(nil)
 	DefaultPageDataBuilder = NewPageDataBuilder(CPolicy(), TPolicy())
-	DefaultCardBuilder = DefSetCardBuilder()
+	DefaultCardBuilder = NewCardBuilder(DefaultTemplate(), DefaultClasses())
 	IDCount = 0
 }
 
@@ -66,21 +66,35 @@ func TPolicy() *bluemonday.Policy {
 	return tp
 }
 
-//CreateJSON process URL in default settings to generate json. This is used in cli tool. This write data to bw and return error if error occur.
-func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
+//FetchAndBuildPageData fetch information about url and build pagedata
+func FetchAndBuildPageData(URL string, messageWriter io.Writer) (*PageData, error) {
 	url, ctype, content, err := Fetch(URL)
 	if err != nil {
-		fmt.Fprintf(messageWriter, "In Fetch Process, error occur\r\n")
+		fmt.Fprintf(messageWriter, "In fetch, error occur\r\n")
 		return nil, err
 	}
+
 	pd := BuildPageData(url, ctype, string(content))
 	pd.ComplementBasicFields()
+
+	return pd, nil
+}
+
+//WriteJSON write json data from PageData. This is used in cli tool. This write data to w and return error if error occur.
+func WriteJSON(pd *PageData, w io.Writer, messageWriter io.Writer, hasPrev bool) error {
+	/*
+		url, ctype, content, err := Fetch(URL)
+		if err != nil {
+			fmt.Fprintf(messageWriter, "In Fetch Process, error occur\r\n")
+			return nil, err
+		}
+		pd := BuildPageData(url, ctype, string(content))
+		pd.ComplementBasicFields()
+	*/
 	jsonByte, err := pd.ToJSON()
 	if err != nil {
-		if returnPageData {
-			return pd, err
-		}
-		return nil, err
+
+		return err
 	}
 	if hasPrev {
 		w.Write([]byte(","))
@@ -89,33 +103,35 @@ func CreateJSON(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, 
 	/*if bw, ok := w.(*bufio.Writer); ok {
 		bw.Flush()
 	}*/
-	if returnPageData {
-		return pd, err
-	}
-	return nil, err
+
+	return err
 }
 
-//CreateHTML create html string.
-func CreateHTML(URL string, w io.Writer, messageWriter io.Writer, hasPrev bool, returnPageData bool) (*PageData, error) {
-	url, ctype, content, err := Fetch(URL)
-	if err != nil {
-		fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
-		return nil, err
-	}
-	pd := BuildPageData(url, ctype, string(content))
-	pd.ComplementBasicFields()
+//WriteHTML create html from pagedata and write it to w.
+func WriteHTML(pd *PageData, cb *CardBuilder, w io.Writer, messageWriter io.Writer, hasPrev bool) error {
+	/*
+		url, ctype, content, err := Fetch(URL)
+		if err != nil {
+			fmt.Fprintf(messageWriter, "In Fetch Process, error occur")
+			return nil, err
+		}
+		pd := BuildPageData(url, ctype, string(content))
+		pd.ComplementBasicFields()
+	*/
 
 	if hasPrev {
 		w.Write([]byte("\r\n"))
 	}
 
-	fmt.Printf("pagedata: %#v\r\n", pd)
-	err = DefaultCardBuilder.Execute(pd, w)
+	//fmt.Printf("pagedata: %#v\r\n", pd)
+	err := cb.Execute(pd, w)
 	/*if bw, ok := w.(*bufio.Writer); ok {
 		bw.Flush()
 	}*/
-	if returnPageData {
-		return pd, err
-	}
-	return nil, err
+	/*
+		if returnPageData {
+			return pd, err
+		}
+	*/
+	return err
 }
