@@ -210,7 +210,15 @@ func ErrorPageData(url, ctype string, content []byte, err error) *PageData {
 	}
 	if err.Error() == "statusError" {
 		pd.Title = html.EscapeString(string(content))
-		pd.Description = pd.Title
+		pd.Description = fmt.Sprintf("%s - %s", pd.Title, url)
+
+		return pd
+	}
+
+	if strings.HasPrefix(err.Error(), "Invalid Content-Type: ") {
+
+		pd.Description = ""
+		pd.Title = url
 
 		return pd
 	}
