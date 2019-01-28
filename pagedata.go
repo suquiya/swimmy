@@ -195,6 +195,29 @@ func BuildPageData(url string, ctype string, htmlContent string) *PageData {
 	return DefaultPageDataBuilder.BuildPageData(url, ctype, htmlContent)
 }
 
+//ErrorPageData return pagedata if get err in fetch.
+func ErrorPageData(url, ctype string, content []byte, err error) *PageData {
+	pd := NewPageData(url, ctype)
+
+	if err.Error() == "input is not URL" {
+
+		pd.URL = ""
+		pd.CannonicalURL = ""
+		d := html.EscapeString(DefaultPageDataBuilder.TagContentSanitize(url))
+		pd.Title = "Link value is not URL: " + d
+		pd.Description = "リンクとして指定された値" + d + "は正しくなかったためこのカードは白紙の状態で提示されます"
+		return pd
+	}
+	if err.Error() == "statusError" {
+		pd.Title = html.EscapeString(string(content))
+		pd.Description = pd.Title
+
+		return pd
+	}
+
+	return pd
+}
+
 /*
 BuildPageData parse html content, retrieve tag info and fill PageData.
 Before parsing, Parse sanitize html content with its SanitizePolicy.
