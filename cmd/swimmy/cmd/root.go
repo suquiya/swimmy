@@ -32,6 +32,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"html/template"
 	"os"
 	"strings"
 
@@ -74,10 +75,31 @@ More details, Please type "swimmy --help" and enter.
 				return err
 			}
 
+			tempSrc, err := cmd.Flags().GetString("template")
+
+			if err != nil {
+				return err
+			}
+
 			tojson := formatStr == "json" || strings.HasPrefix(formatStr, "json,") || strings.HasSuffix(formatStr, ",json")
 
 			tohtml := formatStr == "html" || strings.HasPrefix(formatStr, "html,") || strings.HasSuffix(formatStr, ",html")
 
+			ExistUserTemp := false
+			var userTemp *template.Template
+			if tohtml {
+				if e, _ := swimmy.IsExistFilePath(tempSrc); e {
+					tmpl, err := template.ParseFiles(tempSrc)
+					if err == nil {
+						ExistUserTemp = true
+						userTemp = tmpl
+					} else {
+						ExistUserTemp = false
+					}
+				} else {
+					tempSrc = ""
+				}
+			}
 			fmt.Println(tojson, tohtml)
 
 			i = strings.ToLower(i)
@@ -148,6 +170,11 @@ More details, Please type "swimmy --help" and enter.
 			}
 
 			swimmy.Init()
+
+			cardBuilder := swimmy.DefaultCardBuilder
+			if ExistUserTemp {
+				cardBuilder = swimmy.NewCardBuilder(userTemp, swimmy.DefaultClasses())
+			}
 			if l {
 				isfp, err := swimmy.IsExistFilePath(input)
 				if !isfp {
@@ -183,7 +210,7 @@ More details, Please type "swimmy --help" and enter.
 								}
 							}
 							if tohtml {
-								err = swimmy.WriteHTML(pd, swimmy.DefaultCardBuilder, ow, cmd.OutOrStdout(), count > 1)
+								err = swimmy.WriteHTML(pd, cardBuilder, ow, cmd.OutOrStdout(), count > 1)
 								if err != nil {
 									cmd.Println(err)
 								} else {
@@ -222,7 +249,7 @@ More details, Please type "swimmy --help" and enter.
 					}
 					if tohtml {
 
-						err = swimmy.WriteHTML(pd, swimmy.DefaultCardBuilder, ow, cmd.OutOrStdout(), false)
+						err = swimmy.WriteHTML(pd, cardBuilder, ow, cmd.OutOrStdout(), false)
 
 						if err != nil {
 							cmd.Println(err)
@@ -248,6 +275,8 @@ More details, Please type "swimmy --help" and enter.
 	rootCmd.Flags().StringP("IfOutputExist", "i", "S", "this flag define behavior in case that specified output file is already exist: [A]ppend,[O]verwritte or [S]tdout, default is S.")
 
 	rootCmd.Flags().StringP("format", "f", "json", "this flag decide format for outputting url information. You can specify \"json\" or \"html\". If you want to get two type formats, you should specify \"json,html\". Default is \"json\".")
+
+	rootCmd.Flags().StringP("template", "t", "", "User can specify template file path by using this flag.")
 
 	return rootCmd
 }
