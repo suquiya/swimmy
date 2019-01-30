@@ -199,28 +199,39 @@ func BuildPageData(url string, ctype string, htmlContent string) *PageData {
 func ErrorPageData(url, ctype string, content []byte, err error) *PageData {
 	pd := NewPageData(url, ctype)
 
-	if err.Error() == "input is not URL" {
+	fe, ok := err.(*FetchError)
+	if ok {
+		if fe.ErrorType == IsNotURLError {
 
-		pd.URL = ""
-		pd.CannonicalURL = ""
-		d := html.EscapeString(DefaultPageDataBuilder.TagContentSanitize(url))
-		pd.Title = "Link value is not URL: " + d
-		pd.Description = "リンクとして指定された値" + d + "は正しくなかったためこのカードは白紙の状態で提示されます"
-		return pd
-	}
-	if err.Error() == "statusError" {
-		pd.Title = html.EscapeString(string(content))
-		pd.Description = fmt.Sprintf("%s - %s", pd.Title, url)
+			pd.URL = ""
+			pd.CannonicalURL = ""
+			d := html.EscapeString(DefaultPageDataBuilder.TagContentSanitize(url))
+			pd.Title = "Link value is not URL: " + d
+			pd.Description = "Value is invalid: " + d
+			return pd
+		}
+		if fe.ErrorType == StatusError {
+			pd.Title = html.EscapeString(string(content))
+			pd.Description = fmt.Sprintf("%s - %s", pd.Title, url)
 
-		return pd
-	}
+			return pd
+		}
 
-	if strings.HasPrefix(err.Error(), "Invalid Content-Type: ") {
+		if fe.ErrorType == InvalidContentTypeError {
 
-		pd.Description = ""
-		pd.Title = url
+			pd.Description = html.EscapeString(DefaultPageDataBuilder.TagContentSanitize(ctype))
+			pd.Title = url
 
-		return pd
+			return pd
+		}
+
+		if fe.ErrorType == BadEncodeError {
+			pd.Description = "Sorry, Cannot handle Encode methods of this page."
+			pd.Title = url
+		}
+	} else {
+		pd.Title = "Error"
+		pd.Description = html.EscapeString(DefaultPageDataBuilder.TagContentSanitize(err.Error()))
 	}
 
 	return pd

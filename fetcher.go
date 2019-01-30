@@ -29,11 +29,38 @@ func Fetch(url string) (string, string, []byte, error) {
 	return DefaultContentFetcher.Fetch(url)
 }
 
+//FetchError is error struct for fetch
+type FetchError struct {
+	ErrorType int
+	s         string
+}
+
+//Error is implement of fetcherror for error interface
+func (fe *FetchError) Error() string {
+	return fe.s
+}
+
+//NewFetchError create fetch error
+func NewFetchError(t int, s string) *FetchError {
+	return &FetchError{t, s}
+}
+
+const (
+	//IsNotURLError represents error occur from input is not URL
+	IsNotURLError = iota
+	//BadEncodeError represents url contents is not encoded with encode methods that swimmy can handle
+	BadEncodeError
+	//InvalidContentTypeError represents content is not html or text
+	InvalidContentTypeError
+	//StatusError is StatusError
+	StatusError
+)
+
 //Fetch fetch url contents with f's HTTPClient. If you don't set your custom http client, Fetch use DefaultClient of net/http package.
 func (cf *ContentFetcher) Fetch(url string) (string, string, []byte, error) {
 
 	if !govalidator.IsRequestURL(url) {
-		return "", "", nil, fmt.Errorf("input is not URL")
+		return "", "", nil, NewFetchError(IsNotURLError, "Input is not url")
 	}
 
 	var res *http.Response
@@ -43,10 +70,10 @@ func (cf *ContentFetcher) Fetch(url string) (string, string, []byte, error) {
 	} else {
 		res, err = http.DefaultClient.Get(url)
 	}
+	defer res.Body.Close()
 	if err != nil {
 		return "", "", nil, err
 	}
-	defer res.Body.Close()
 	if res.StatusCode < 400 {
 		contentType := res.Header.Get("Content-Type")
 		if strings.HasPrefix(contentType, "text/html") || strings.HasPrefix(contentType, "text/plain") {
@@ -70,10 +97,11 @@ func (cf *ContentFetcher) Fetch(url string) (string, string, []byte, error) {
 				return url, contentType, scb, err
 			}
 			fmt.Printf("Bad Encode: %s", name)
-			return url, "bad Encode", cbyte, fmt.Errorf("Bad Encode: %s", name)
+			return url, "bad Encode", cbyte, NewFetchError(BadEncodeError, fmt.Sprintf("Bad Encode: %s", name))
 		}
 
-		return "", "", nil, fmt.Errorf("Invalid Content-Type: %s", contentType)
+		s := fmt.Sprintf("Invalid Content-Type: %s", contentType)
+		return "", "", nil, NewFetchError(InvalidContentTypeError, s)
 	}
-	return "", "StatusError", []byte(res.Status), fmt.Errorf("statusError")
+	return "", "StatusError", []byte(res.Status), NewFetchError(StatusError, "StatusError")
 }
