@@ -5,10 +5,13 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/asaskevich/govalidator"
 
 	"github.com/microcosm-cc/bluemonday"
 	"golang.org/x/net/html"
@@ -207,7 +210,13 @@ func ReadList(listPath string) ([]string, error) {
 
 //IsExistFilePath validate whether val is exist filepath or not and confirm that it exist and it is not directory.
 func IsExistFilePath(val string) (bool, error) {
-
+	absPath, err := filepath.Abs(val)
+	if err != nil {
+		return false, err
+	}
+	if ok, _ := govalidator.IsFilePath(absPath); !ok {
+		return ok, fmt.Errorf("IsNotFilePath")
+	}
 	fi, err := os.Stat(val)
 	if os.IsNotExist(err) {
 		return false, fmt.Errorf("Not Exist: filepath %s", val)
@@ -223,11 +232,12 @@ func IsExistFilePath(val string) (bool, error) {
 
 //IsFilePath is validate filepath
 func IsFilePath(val string) (bool, error) {
-	_, err := os.Stat(val)
-	if os.IsNotExist(err) {
-		return true, err
-	} else if err != nil {
+	absPath, err := filepath.Abs(val)
+	if err != nil {
 		return false, err
+	}
+	if ok, _ := govalidator.IsFilePath(absPath); !ok {
+		return ok, fmt.Errorf("IsNotFilePath")
 	}
 	return true, nil
 }
