@@ -26,7 +26,7 @@ Of cource, Swimmy is not only cli tool but also library. Using as library(packag
 To install,
 
 ```
-go get -u github.com/suquiya/swimmy/swimmy
+go get -u github.com/suquiya/swimmy/cmd/swimmy
 ```
 
 ### Command
@@ -38,7 +38,7 @@ Flags:
     + -f, --format: user can choose html or json
     + -l, --list: If this flag is true, url is interpreted as path to file listing urls.
 
-More details, see swimmy's help
+More details, see swimmy's help (swimmy --help).
 
 ### Package
  User can choose this as library.
